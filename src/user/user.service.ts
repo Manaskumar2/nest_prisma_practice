@@ -1,21 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { DatabaseService } from './../database/database.service';
-import { ValidateIdDto, UpdateUserDto } from './../dto/user.dto';
+// import { Prisma } from '@prisma/client';
+import { DatabaseService } from 'src/database/database.service';
+import { ValidateIdDto, UpdateUserDto, CreateUserDto } from './../dto/user.dto';
 
 @Injectable()
 export class UserService {
   constructor(private readonly DatabaseService: DatabaseService) {}
-  async create(createUserDto: Prisma.UserCreateInput) {
+  async create(createUserDto: CreateUserDto) {
     return this.DatabaseService.user.create({ data: createUserDto });
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async findAll() {
+    return await this.DatabaseService.user.findMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(uid: string) {
+    return await this.DatabaseService.user.findUnique({
+      where: { uid: uid },
+      select: { id: true, email: true }, // Add the required fields
+    });
   }
   async update({ id }: ValidateIdDto, updateUserDto: UpdateUserDto) {
     return this.DatabaseService.user.update({

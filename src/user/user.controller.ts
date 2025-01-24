@@ -8,73 +8,66 @@ import {
   HttpException,
   HttpStatus,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto, ValidateIdDto } from 'src/dto/user.dto';
+import { FirebaseAuthGuard } from 'src/config/firebase-auth.guard';
+import { ResponseService } from 'src/core/response/response.service';
 
-// eslint-disable-next-line prettier/prettier
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly responseService: ResponseService,
+  ) {}
 
   @Post('/api/create-users')
   async create(@Body() createUserDto: CreateUserDto) {
     try {
-      const user = await this.userService.create(createUserDto);
-      return {
-        success: true,
-        message: 'User created successfully',
-        data: user,
-      };
+      return this.responseService.success(await this.userService.create(createUserDto), 'User created successfully');
     } catch (error) {
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Failed to create user',
-          error: error.message,
-        },
-        HttpStatus.BAD_REQUEST,
-      );
+      return this.responseService.error('Failed to create user', HttpStatus.BAD_REQUEST);
     }
   }
 
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  async findAll() {
+    return this.responseService.success(await this.userService.findAll(), 'Users retrieved successfully');
   }
 
+  @UseGuards(FirebaseAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    try {
+      const user = await this.userService.findOne(id);
+      return this.responseService.success(user, 'User retrieved successfully');
+    } catch (error) {
+      return this.responseService.error('User not found', HttpStatus.NOT_FOUND);
+    }
   }
 
+  @UseGuards(FirebaseAuthGuard)
   @Put('api/update-user/:id')
-  // eslint-disable-next-line prettier/prettier
-    async update(
+  async update(
     @Param() params: ValidateIdDto, // Destructure id from ValidateIdDto
     @Body() updateUserDto: UpdateUserDto,
   ) {
     try {
-      const user = this.userService.update(params, updateUserDto);
-      return {
-        success: true,
-        message: 'User updated successfully',
-        data: user,
-      };
+      const user = await this.userService.update(params, updateUserDto);
+      return this.responseService.success(user, 'User updated successfully');
     } catch (error) {
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Failed to update user',
-          error: error.message,
-        },
-        HttpStatus.BAD_REQUEST,
-      );
+      return this.responseService.error('Failed to update user', HttpStatus.BAD_REQUEST);
     }
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+  async remove(@Param('id') id: string) {
+    try {
+      await this.userService.remove(+id);
+      return this.responseService.success(null, 'User deleted successfully');
+    } catch (error) {
+      return this.responseService.error('Failed to delete user', HttpStatus.BAD_REQUEST);
+    }
   }
 }
